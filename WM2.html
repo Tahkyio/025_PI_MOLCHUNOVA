@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Стиральная машина — Панель управления</title>
+    <style>
+        body {
+            background-color: #10141d;
+            color: #e6e6eb;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px 0;
+        }
+        .container { width: 850px; }
+
+        /* --- ПАНЕЛЬ УПРАВЛЕНИЯ --- */
+        .control-panel {
+            background: linear-gradient(135deg, #2d3545 0%, #1b202e 100%);
+            border: 3px solid #46505f;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+            transition: filter 0.3s;
+        }
+        .panel-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .panel-row:last-child { margin-bottom: 0; }
+        .panel-title { font-size: 13px; letter-spacing: 1.5px; color: #a0aec0; text-transform: uppercase; font-weight: bold; }
+        
+        .panel-display {
+            color: #00e676; font-family: monospace; font-size: 14px;
+            background: #000; padding: 5px 12px; border-radius: 4px; border: 1px solid #2d3545;
+            min-width: 280px; text-align: right; transition: color 0.3s;
+        }
+        .panel-display.diag { color: #f5a623; }
+        .panel-display.off { color: #333; text-shadow: none; }
+        .panel-display.fault { color: #ff4d4d; animation: blink 1s infinite; font-weight: bold; }
+        @keyframes blink { 50% { opacity: 0.3; } }
+
+        /* Кнопки */
+        .mode-group { display: flex; gap: 10px; }
+        .btn-mode {
+            background: #232d3c; border: 1px solid #46505f; color: #a0aec0;
+            padding: 10px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; transition: all 0.2s;
+        }
+        .btn-mode:hover { border-color: #2e73e8; color: #fff; }
+        .btn-mode.selected { background: #2e73e8; border-color: #6bb5ff; color: white; box-shadow: 0 0 10px rgba(46,115,232,0.4); }
+        .btn-mode:disabled { opacity: 0.4; cursor: not-allowed; }
+        
+        .btn-main {
+            background: #2ea84e; border: none; color: white; padding: 12px 32px;
+            font-size: 15px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s;
+        }
+        .btn-main.paused { background: #f5a623; }
+        .btn-main:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        .btn-power {
+            background: #232d3c; border: 2px solid #46505f; color: #a0aec0;
+            width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+            font-size: 20px; font-weight: bold; line-height: 1; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .btn-power:hover { border-color: #2e73e8; color: #fff; }
+        .btn-power.on { background: #2ea84e; border-color: #6bff9b; color: white; box-shadow: 0 0 12px rgba(46,168,78,0.6); }
+        .btn-power.diag { background: #f5a623; border-color: #ffce6b; color: white; animation: pulse 1s ease-in-out infinite; }
+        .btn-power.fault { background: #c0392b; border-color: #ff6b6b; color: white; box-shadow: 0 0 12px rgba(192,57,43,0.8); }
+        @keyframes pulse { 0%, 100% { box-shadow: 0 0 12px rgba(245,166,35,0.6); } 50% { box-shadow: 0 0 20px rgba(245,166,35,1); } }
+
+        .control-panel.off { filter: grayscale(0.9) brightness(0.5); }
+        .control-panel.off .btn-mode, .control-panel.off .btn-main { pointer-events: none; }
+        .control-panel.off .btn-power { opacity: 1; pointer-events: auto; filter: none; }
+
+        /* --- НИЖНЕЕ ОКНО --- */
+        .window {
+            background-color: #161b26; border: 2px solid #2e3543;
+            border-radius: 12px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .status-title { font-size: 12px; color: #8892b0; text-transform: uppercase; letter-spacing: 1px; }
+        .status-value { font-size: 24px; font-weight: bold; color: #2e73e8; margin-top: 5px; text-transform: uppercase; }
+        .status-value.fault { color: #ff4d4d; }
+        .substatus-value { font-size: 14px; color: #00e676; font-family: monospace; margin-top: 6px; min-height: 20px; }
+        .substatus-value.fault { color: #ff4d4d; font-weight: bold; }
+
+        .main-content { display: flex; justify-content: center; align-items: center; margin-bottom: 30px; }
+        
+        .drum-container {
+            width: 220px; height: 220px; border: 2px solid #46505f; border-radius: 12px;
+            display: flex; justify-content: center; align-items: center; background: #111622;
+        }
+        .drum {
+            width: 170px; height: 170px; border: 2px dashed #46505f; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; position: relative;
+        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spinning { animation: spin 2s linear infinite; border-color: #2e73e8; }
+
+        .sensors { display: flex; justify-content: space-between; border-top: 1px solid #2e3543; padding-top: 20px; }
+        .sensor-card { text-align: center; width: 33%; }
+        .sensor-label { color: #8892b0; font-size: 13px; margin-bottom: 5px; }
+        .sensor-val { font-size: 18px; font-weight: bold; }
+
+        .fault-banner {
+            background: #c0392b; color: white; padding: 10px 14px; border-radius: 6px;
+            font-size: 14px; font-weight: bold; margin-bottom: 15px;
+            display: none; text-align: center; border-left: 5px solid #ff4d4d;
+        }
+        .fault-banner.visible { display: block; }
+
+        /* Панель эмуляции */
+        .debug-bar {
+            display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+            margin-bottom: 15px; padding: 10px 15px;
+            background: #161b26; border: 1px dashed #46505f; border-radius: 6px;
+            font-size: 12px; justify-content: center;
+        }
+        .debug-label { color: #8892b0; margin-right: 5px; }
+        .btn-debug {
+            background: #2d3545; border: 1px solid #f39c12; color: #f39c12;
+            padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s;
+        }
+        .btn-debug:hover { background: #f39c12; color: white; }
+        .btn-debug.red { border-color: #c0392b; color: #ff8b7e; }
+        .btn-debug.red:hover { background: #c0392b; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- ПАНЕЛЬ УПРАВЛЕНИЯ -->
+    <div class="control-panel" id="controlPanel">
+        <div class="panel-row">
+            <div class="panel-title">Панель управления</div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <div id="panelDisplay" class="panel-display off">OFF</div>
+                <button class="btn-power" id="btnPower" onclick="togglePower()" title="Питание">⏻</button>
+            </div>
+        </div>
+        <div class="panel-row">
+            <div class="mode-group">
+                <button class="btn-mode selected" id="m-cotton" onclick="selectProgram('cotton')">Хлопок 40°C</button>
+                <button class="btn-mode" id="m-quick" onclick="selectProgram('quick')">Быстрая 30°C</button>
+                <button class="btn-mode" id="m-delicate" onclick="selectProgram('delicate')">Деликатная 20°C</button>
+            </div>
+            <button class="btn-main" id="btnMainAction" onclick="handleMainAction()" disabled>СТАРТ</button>
+        </div>
+    </div>
+
+    <!-- ЭМУЛЯЦИЯ АВАРИЙ (генерируется скриптом) -->
+    <div class="debug-bar" id="debugBar">
+        <span class="debug-label">Эмуляция:</span>
+        <!-- Сюда вставятся кнопки -->
+    </div>
+
+    <!-- ОКНО СИМУЛЯЦИИ -->
+    <div class="window">
+        <div id="faultBanner" class="fault-banner"></div>
+
+        <div class="header">
+            <div>
+                <div class="status-title">Текущее состояние автомата</div>
+                <div class="status-value" id="statusText">ВЫКЛЮЧЕНО</div>
+                <div class="substatus-value" id="subStatusText"></div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="drum-container">
+                <div class="drum" id="drum">
+                    <div style="width:10px; height:10px; background:#ff3232; border-radius:50%; position:absolute; top:0;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sensors">
+            <div class="sensor-card">
+                <div class="sensor-label">Вода в баке</div>
+                <div class="sensor-val" id="valWater">0 %</div>
+            </div>
+            <div class="sensor-card">
+                <div class="sensor-label">Температура</div>
+                <div class="sensor-val" id="valTemp">20.0 °C</div>
+            </div>
+            <div class="sensor-card">
+                <div class="sensor-label">Скорость отжима</div>
+                <div class="sensor-val" id="valSpeed">0 об/м</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // 0. ЕДИНЫЙ РЕЕСТР АВАРИЙ
+    // ============================================================
+    const FAULTS = {
+        E1: { flag: 'overheat',  desc: 'Перегрев ТЭНа',            btn: 'Перегрев' },
+        E2: { flag: 'noWater',   desc: 'Вода не набирается',      btn: 'Нет залива' },
+        E3: { flag: 'motorFail', desc: 'Неисправность двигателя', btn: 'Двигатель' },
+        E4: { flag: 'doorOpen',  desc: 'Дверь открыта',           btn: 'Открыть дверь' },
+        E5: { flag: 'leak',      desc: 'Обнаружена протечка',     btn: 'Протечка' }
+    };
+
+    // Автогенерация кнопок эмуляции
+    const debugBar = document.getElementById('debugBar');
+    Object.entries(FAULTS).forEach(([code, data]) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-debug' + (code === 'E4' || code === 'E5' ? ' red' : '');
+        btn.innerText = `${data.btn} (${code})`;
+        btn.onclick = () => triggerBreak(data.flag);
+        debugBar.appendChild(btn);
+    });
+
+    // Кнопка "Сброс (Мастер)"
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'btn-debug';
+    resetBtn.innerText = 'Сброс (Мастер)';
+    resetBtn.style.marginLeft = '15px';
+    resetBtn.onclick = () => repairAll();
+    debugBar.appendChild(resetBtn);
+
+    // ============================================================
+    // 1. СОСТОЯНИЯ
+    // ============================================================
+    const S = {
+        OFF:         'OFF',
+        DIAG:        'DIAGNOSTICS',
+        WAIT:        'ОЖИД_ОЖИД',
+        SELECT:      'ОЖИД_ВЫБОР_ПРОГ',
+        ARMED:       'ОЖИД_ЗАПУСК',
+        FILL:        'ОЖИД_ЗАЛИВ',
+        HEAT:        'ОЖИД_ЗАМЕН',
+        WASH:        'ОЖИД_СТИРКА',
+        DRAIN:       'ОЖИД_СЛИВ',
+        PAUSE:       'ОЖИД_ПАУЗА',
+        SPIN:        'ОЖИД_ОТЖИМ',
+        FINISH:      'ОЖИД_ЗАВЕРШ',
+        FAULT:       'FAULT'
+    };
+
+    // ============================================================
+    // 2. ПРОГРАММЫ
+    // ============================================================
+    const Programs = {
+        cotton:   { label: 'ХЛОПОК',   temp: 40, spin: 800, fillTicks: 50, heatTicks: 40, washTicks: 90, drainTicks: 40, pauseTicks: 25, spinTicks: 40 },
+        quick:    { label: 'БЫСТРАЯ',  temp: 30, spin: 600, fillTicks: 35, heatTicks: 25, washTicks: 50, drainTicks: 25, pauseTicks: 15, spinTicks: 30 },
+        delicate: { label: 'ДЕЛИКАТН', temp: 20, spin: 400, fillTicks: 45, heatTicks: 20, washTicks: 70, drainTicks: 35, pauseTicks: 20, spinTicks: 25 }
+    };
+
+    // ============================================================
+    // 3. ДИАГНОСТИЧЕСКИЕ ШАГИ (с привязкой к флагам поломок)
+    // ============================================================
+    const DIAG_STEPS = [
+        { name: 'Питание',            ticks: 20 },
+        { name: 'ТЭН',                ticks: 25, failFlag: 'overheat' },
+        { name: 'Клапан залива',      ticks: 20, failFlag: 'noWater' },
+        { name: 'Насос слива',        ticks: 20 },
+        { name: 'Двигатель',          ticks: 30, failFlag: 'motorFail' },
+        { name: 'Датчик температуры', ticks: 20 },
+        { name: 'Датчик уровня',      ticks: 20, failFlag: 'leak' }, // Протечка тоже проверяется датчиком
+        { name: 'Замок двери',        ticks: 25, failFlag: 'doorOpen' }
+    ];
+
+    // ============================================================
+    // 4. МАШИНА
+    // ============================================================
+    let selectedProgKey = 'cotton';
+
+    const machine = {
+        state: S.OFF,
+        subState: '',
+        phaseTimer: 0,
+        diagStep: 0,
+        waterLevel: 0,
+        temperature: 20.0,
+        spinSpeed: 0,
+        isProgramSelected: false,
+        startPressed: false,
+        isPaused: false,
+        // Флаги неисправностей
+        overheat: false,
+        noWater: false,
+        motorFail: false,
+        doorOpen: false,
+        leak: false,
+        // Данные последней ошибки
+        lastFaultCode: '',
+        lastFaultDesc: '',
+        lastFinishLabel: ''
+    };
+
+    // ============================================================
+    // 5. ПИТАНИЕ И РЕМОНТ
+    // ============================================================
+    function togglePower() {
+        if (machine.state === S.OFF) {
+            // Включение
+            machine.state = S.DIAG;
+            machine.diagStep = 0;
+            machine.phaseTimer = 0;
+            machine.isPaused = false;
+            machine.subState = '';
+            machine.isProgramSelected = false;
+            machine.waterLevel = 0;
+            machine.temperature = 20;
+            machine.spinSpeed = 0;
+            updateUI();
+            return;
+        }
+
+        const isRunning = ![S.WAIT, S.SELECT, S.ARMED, S.FINISH, S.FAULT].includes(machine.state);
+        if (isRunning && !confirm('Машина работает. Выключить?')) return;
+
+        machine.state = S.OFF;
+        machine.isPaused = false;
+        machine.isProgramSelected = false;
+        machine.waterLevel = 0;
+        machine.temperature = 20;
+        machine.spinSpeed = 0;
+        machine.subState = '';
+        machine.lastFinishLabel = '';
+        updateUI();
+    }
+
+    // "Мастер" приезжает и все чинит
+    function repairAll() {
+        Object.values(FAULTS).forEach(f => machine[f.flag] = false);
+        machine.lastFaultCode = '';
+        machine.lastFaultDesc = '';
+        
+        if (machine.state === S.FAULT) {
+            machine.state = S.WAIT;
+            machine.subState = 'Все узлы исправны.';
+        } else if (machine.state === S.OFF) {
+            // Если выключена, просто чистим флаги
+        }
+        
+        showToast('🔧 Мастер заменил неисправные узлы.');
+        updateUI();
+    }
+
+    // ============================================================
+    // 6. ВЫБОР И СТАРТ
+    // ============================================================
+    function selectProgram(progKey) {
+        if (![S.WAIT, S.SELECT, S.ARMED].includes(machine.state)) return;
+
+        selectedProgKey = progKey;
+        machine.isProgramSelected = true;
+
+        document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('selected'));
+        document.getElementById(`m-${progKey}`).classList.add('selected');
+        updateUI();
+    }
+
+    function handleMainAction() {
+        if ([S.OFF, S.DIAG, S.FAULT].includes(machine.state)) return;
+
+        if ([S.WAIT, S.SELECT, S.ARMED, S.FINISH].includes(machine.state)) {
+            machine.isProgramSelected = true;
+            machine.state = S.ARMED;
+            machine.startPressed = true;
+            machine.phaseTimer = 0;
+            // НЕ сбрасываем флаги поломок! Если сломано — упадет при старте
+        } else {
+            machine.isPaused = !machine.isPaused;
+        }
+        updateUI();
+    }
+
+    // ============================================================
+    // 7. ПЕРЕХОДЫ
+    // ============================================================
+    const transitions = [
+        [S.WAIT,   S.SELECT,  () => true,                              () => {}],
+        [S.SELECT, S.ARMED,   () => machine.isProgramSelected,         () => {}],
+        [S.ARMED,  S.FILL,    () => machine.startPressed,              (m) => {
+            m.startPressed = false;
+            m.waterLevel = 0;
+            m.temperature = 20;
+            m.spinSpeed = 0;
+            m.isPaused = false;
+        }],
+        [S.FILL,   S.HEAT,    (m) => m.waterLevel >= 100,              (m) => { m.waterLevel = 100; }],
+        [S.HEAT,   S.WASH,    (m, p) => m.temperature >= p.temp,       () => {}],
+        [S.WASH,   S.DRAIN,   (m, p) => m.phaseTimer >= p.washTicks,   () => {}],
+        [S.DRAIN,  S.PAUSE,   (m, p) => m.phaseTimer >= p.drainTicks,  (m) => { m.waterLevel = 0; }],
+        [S.PAUSE,  S.SPIN,    (m, p) => m.phaseTimer >= p.pauseTicks,  () => {}],
+        [S.SPIN,   S.FINISH,  (m, p) => m.phaseTimer >= p.spinTicks,   (m) => { m.spinSpeed = 0; }],
+        [S.FINISH, S.WAIT,    (m) => m.phaseTimer >= 40,               (m) => {
+            m.spinSpeed = 0;
+            m.waterLevel = 0;
+            m.isProgramSelected = false;
+        }]
+    ];
+
+    // ============================================================
+    // 8. ДИАГНОСТИКА (с проверкой на поломки)
+    // ============================================================
+    function runDiagnostics(m) {
+        const step = DIAG_STEPS[m.diagStep];
+        if (!step) {
+            m.state = S.WAIT;
+            m.diagStep = 0;
+            m.phaseTimer = 0;
+            m.subState = '';
+            updateUI();
+            return;
+        }
+
+        // Если на этом шаге проверяется узел, и он сломан — авария
+        if (step.failFlag && m[step.failFlag]) {
+            const faultCode = Object.keys(FAULTS).find(code => FAULTS[code].flag === step.failFlag);
+            if (faultCode) {
+                forceFault(faultCode);
+                return;
+            }
+        }
+
+        if (m.phaseTimer >= step.ticks) {
+            m.diagStep++;
+            m.phaseTimer = 0;
+            if (m.diagStep >= DIAG_STEPS.length) {
+                m.state = S.WAIT;
+                m.diagStep = 0;
+                m.phaseTimer = 0;
+                m.subState = '';
+                updateUI();
+                return;
+            }
+        }
+        m.subState = `Проверка: ${DIAG_STEPS[m.diagStep].name} (${m.diagStep + 1}/${DIAG_STEPS.length})`;
+    }
+
+    // ============================================================
+    // 9. ФИЗИКА
+    // ============================================================
+    function simulatePhysics(m, prog) {
+        switch (m.state) {
+            case S.FILL:
+                if (m.noWater) {
+                    m.subState = `набор: 0% (нет залива)`;
+                } else if (m.leak) {
+                    m.waterLevel = Math.min(100, m.waterLevel + 2);
+                    m.subState = `набор: ${Math.floor(m.waterLevel)}% (ПРОТЕЧКА!)`;
+                } else {
+                    m.waterLevel = Math.min(100, m.waterLevel + 2);
+                    m.subState = `набор: ${Math.floor(m.waterLevel)}%`;
+                }
+                m.temperature = 20;
+                m.spinSpeed = 0;
+                break;
+            case S.HEAT: {
+                const target = prog.temp;
+                if (m.overheat) {
+                    m.temperature += 2.0;
+                    m.subState = `Нагрев: ПЕРЕГРЕВ! (${m.temperature.toFixed(0)}°C)`;
+                } else if (m.temperature < target) {
+                    m.temperature = Math.min(target, m.temperature + 0.8);
+                    m.subState = `Нагрев: Работа (${m.temperature.toFixed(0)}→${target}°C)`;
+                } else {
+                    m.subState = 'Циркуляция: Работа';
+                }
+                m.spinSpeed = 20;
+                break;
+            }
+            case S.WASH: {
+                if (m.temperature < prog.temp && !m.overheat) {
+                    m.temperature = Math.min(prog.temp, m.temperature + 0.4);
+                    m.subState = 'Стирка: Нагрев';
+                } else {
+                    m.subState = 'Стирка: Работа';
+                }
+                m.spinSpeed = 45;
+                m.waterLevel = Math.max(70, m.waterLevel - 0.1);
+                break;
+            }
+            case S.DRAIN:
+                m.waterLevel = Math.max(0, m.waterLevel - 3);
+                m.spinSpeed = 90;
+                m.subState = `слив: ${Math.floor(m.waterLevel)}%`;
+                break;
+            case S.PAUSE:
+                m.spinSpeed = 0;
+                m.subState = 'пауза перед отжимом';
+                break;
+            case S.SPIN: {
+                const target = prog.spin;
+                if (m.motorFail) {
+                    m.spinSpeed = 0;
+                    m.subState = `ОШИБКА ДВИГАТЕЛЯ: 0/${target}`;
+                } else if (m.doorOpen) {
+                    m.spinSpeed = 0;
+                    m.subState = `ОТЖИМ ЗАБЛОКИРОВАН (дверь)`;
+                } else {
+                    if (m.phaseTimer < prog.spinTicks * 0.8) {
+                        m.spinSpeed = Math.min(target, m.spinSpeed + 25);
+                        m.subState = `разгон: ${m.spinSpeed}/${target}`;
+                    } else {
+                        m.spinSpeed = Math.max(0, m.spinSpeed - 40);
+                        m.subState = `торможение: ${m.spinSpeed}/${target}`;
+                    }
+                }
+                m.waterLevel = 0;
+                break;
+            }
+            case S.FINISH:
+                m.spinSpeed = 0;
+                m.waterLevel = 0;
+                m.subState = 'программа завершена';
+                break;
+            case S.WAIT:
+                m.spinSpeed = 0;
+                m.subState = '';
+                break;
+            default:
+                break;
+        }
+    }
+
+    // ============================================================
+    // 10. АВАРИИ
+    // ============================================================
+    
+    function triggerBreak(flagName) {
+        // Теперь можно ломать даже выключенную машину
+        if (machine[flagName]) return; 
+
+        machine[flagName] = true;
+        
+        const faultEntry = Object.entries(FAULTS).find(([code, data]) => data.flag === flagName);
+        if (faultEntry) {
+            const [code, data] = faultEntry;
+            showToast(`Узел сломан: ${data.desc}.`);
+        }
+    }
+
+    function showToast(msg) {
+        const b = document.getElementById('faultBanner');
+        b.innerText = `🔧 ${msg}`;
+        b.style.background = '#f39c12';
+        b.classList.add('visible');
+        setTimeout(() => {
+            b.classList.remove('visible');
+            b.style.background = '#c0392b';
+        }, 3000);
+    }
+
+    function checkFaults(m) {
+        if (m.state === S.FAULT) return;
+
+        if (m.doorOpen && ![S.WAIT, S.SELECT, S.ARMED, S.FINISH, S.DIAG].includes(m.state)) {
+            forceFault('E4'); return;
+        }
+
+        if (m.leak && m.state === S.FILL && m.phaseTimer > 10) {
+            forceFault('E5'); return;
+        }
+
+        if (m.overheat && m.temperature >= 90) {
+            forceFault('E1'); return;
+        }
+
+        if (m.motorFail && m.state === S.SPIN) {
+            forceFault('E3'); return;
+        }
+
+        if (m.state === S.FILL) {
+            const prog = Programs[selectedProgKey];
+            if (m.phaseTimer > prog.fillTicks * 1.5 && m.waterLevel < 100) {
+                forceFault('E2'); return;
+            }
+        }
+    }
+
+    function forceFault(code) {
+        if (machine.state === S.FAULT || machine.state === S.OFF) return;
+
+        const faultInfo = FAULTS[code];
+        
+        machine.state = S.FAULT;
+        machine.isPaused = false;
+        machine.isProgramSelected = false;
+        machine.spinSpeed = 0;
+        machine.waterLevel = 0;
+        
+        machine.lastFaultCode = code;
+        machine.lastFaultDesc = faultInfo.desc;
+        machine.subState = `${code}: ${faultInfo.desc}`;
+
+        showFaultBanner(code, faultInfo.desc);
+        updateUI();
+
+        setTimeout(() => {
+            if (machine.state === S.FAULT) {
+                machine.state = S.WAIT;
+                machine.subState = 'Требуется ремонт (нажмите Сброс).';
+                updateUI();
+            }
+        }, 8000); // 8 секунд на прочтение ошибки
+    }
+
+    function showFaultBanner(code, desc) {
+        const b = document.getElementById('faultBanner');
+        b.innerText = `⚠ АВАРИЯ ${code}: ${desc}`;
+        b.style.background = '#c0392b';
+        b.classList.add('visible');
+    }
+
+    // ============================================================
+    // 11. ГЛАВНЫЙ ШАГ
+    // ============================================================
+    function simulationStep() {
+        if (machine.state === S.OFF) return;
+
+        if (machine.state === S.DIAG) {
+            machine.phaseTimer++;
+            runDiagnostics(machine);
+            updateUI();
+            return;
+        }
+
+        if (machine.state === S.FAULT) return; // Ждем таймер
+        if (machine.isPaused) return;
+
+        const prog = Programs[selectedProgKey];
+        
+        checkFaults(machine);
+        if (machine.state === S.FAULT) return;
+
+        simulatePhysics(machine, prog);
+        machine.phaseTimer++;
+
+        checkFaults(machine);
+        if (machine.state === S.FAULT) return;
+
+        for (const [from, to, guard, action] of transitions) {
+            if (machine.state !== from) continue;
+            if (!guard(machine, prog)) continue;
+
+            action(machine, prog);
+            machine.state = to;
+            machine.phaseTimer = 0;
+
+            if (to === S.FINISH) machine.lastFinishLabel = prog.label;
+            if (to === S.WAIT) {
+                machine.isPaused = false;
+                machine.lastFinishLabel = '';
+            }
+            break;
+        }
+        updateUI();
+    }
+
+    // ============================================================
+    // 12. ОТРИСОВКА
+    // ============================================================
+    function updateUI() {
+        const prog = Programs[selectedProgKey];
+        const display = document.getElementById('panelDisplay');
+        const panel = document.getElementById('controlPanel');
+        const powerBtn = document.getElementById('btnPower');
+        const mainBtn = document.getElementById('btnMainAction');
+        const statusText = document.getElementById('statusText');
+        const subStatusText = document.getElementById('subStatusText');
+        const banner = document.getElementById('faultBanner');
+
+        const isOff = machine.state === S.OFF;
+        const isDiag = machine.state === S.DIAG;
+        const isFault = machine.state === S.FAULT;
+
+        panel.classList.toggle('off', isOff);
+        powerBtn.classList.toggle('on', !isOff && !isDiag && !isFault);
+        powerBtn.classList.toggle('diag', isDiag);
+        powerBtn.classList.toggle('fault', isFault);
+
+        display.classList.remove('diag', 'off', 'fault');
+        if (isOff) {
+            display.innerText = 'OFF';
+            display.classList.add('off');
+        } else if (isDiag) {
+            display.classList.add('diag');
+            const step = DIAG_STEPS[machine.diagStep];
+            const pct = step ? Math.round((machine.phaseTimer / step.ticks) * 100) : 100;
+            display.innerText = `ДИАГНОСТИКА ${machine.diagStep + 1}/${DIAG_STEPS.length} ${pct}%`;
+        } else if (isFault) {
+            display.innerText = `${machine.lastFaultCode}: ${machine.lastFaultDesc}`;
+            display.classList.add('fault');
+        } else if (machine.state === S.FINISH && machine.lastFinishLabel) {
+            display.innerText = `FINISH: ${machine.lastFinishLabel}`;
+        } else if (machine.state === S.WAIT && !machine.isPaused) {
+            if (machine.lastFaultCode) display.innerText = `READY? (${machine.lastFaultCode})`;
+            else display.innerText = `READY: ${prog.label}`;
+        } else if (!machine.isPaused) {
+            display.innerText = `RUN: ${prog.label} (${machine.temperature.toFixed(0)}°C)`;
+        }
+
+        // Баннер
+        if (isFault) {
+            banner.classList.add('visible');
+        } else if (banner.style.background !== '#f39c12') {
+            banner.classList.remove('visible');
+        }
+
+        statusText.innerText = isOff ? 'ВЫКЛЮЧЕНО' : (machine.isPaused ? 'ПАУЗА' : machine.state);
+        statusText.classList.toggle('fault', isFault);
+        
+        subStatusText.innerText = machine.isPaused ? '' : (machine.subState || '');
+        subStatusText.classList.toggle('fault', isFault);
+
+        document.getElementById('valWater').innerText = Math.max(0, Math.floor(machine.waterLevel)) + ' %';
+        document.getElementById('valTemp').innerText  = machine.temperature.toFixed(1) + ' °C';
+        document.getElementById('valSpeed').innerText = machine.spinSpeed + ' об/м';
+
+        const drum = document.getElementById('drum');
+        if (machine.spinSpeed > 0 && !machine.isPaused && !isOff && !isDiag && !isFault) {
+            drum.classList.add('spinning');
+            drum.style.animationDuration = (800 / machine.spinSpeed) + 's';
+        } else {
+            drum.classList.remove('spinning');
+        }
+
+        const lockPrograms = !(machine.state === S.WAIT || machine.state === S.SELECT || machine.state === S.ARMED || machine.state === S.FINISH);
+        document.querySelectorAll('.btn-mode').forEach(b => b.disabled = lockPrograms);
+
+        mainBtn.disabled = isOff || isDiag || isFault;
+        if (!mainBtn.disabled) {
+            if (![S.WAIT, S.SELECT, S.ARMED, S.FINISH].includes(machine.state) && !machine.isPaused) {
+                mainBtn.innerText = 'ПАУЗА';
+                mainBtn.classList.add('paused');
+            } else if (machine.isPaused) {
+                mainBtn.innerText = 'ПРОДОЛЖИТЬ';
+                mainBtn.classList.remove('paused');
+            } else {
+                mainBtn.innerText = 'СТАРТ';
+                mainBtn.classList.remove('paused');
+            }
+        }
+    }
+
+    setInterval(simulationStep, 60);
+    updateUI();</script>
+</body>
+</html>
